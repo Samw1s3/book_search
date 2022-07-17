@@ -1,10 +1,17 @@
 const { User } = require('../models');
 
+function checkUserStatus(context){
+    const user= context.user
+    if(!user){
+        throw new Errpr('You are not logged in.')
+    } 
+    return user;
+}
+
 const resolvers = {
   Query: {
-    me: async () => {
-        //return user that is logged in
-      return User.find({});
+    me: async (parents, args, context) => {
+      return checkUserStatus(context);
     },
   },
   Mutation: {
@@ -17,7 +24,7 @@ const resolvers = {
     const correctPw = await user.isCorrectPassword(password);
 
     if (!correctPw) {
-        throw new Error("Password Wrong");;
+        throw new Error("Password Wrong");
     }
     const token = signToken(user);
     return { token, user };
@@ -39,6 +46,17 @@ const resolvers = {
           console.log(err);
           return res.status(400).json(err);
         }
+    },
+    removeBook: async (parent, { bookId }, context) => {
+        if (context.user) {
+            const updatedUser = await User.findOneAndUpdate(
+                { _id: context.user._id },
+                { $pull: { savedBooks: { bookId:bookId } } },
+                { new: true }
+              );
+              return updatedUser;
+        }
+        throw new Error("You must be logged in");
     },
     addUser: async (parent, args, context) => {
       const user = await User.create(args);
