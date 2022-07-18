@@ -2,7 +2,7 @@ const { ApolloServer } = require('apollo-server-express');
 const express = require('express');
 const path = require('path');
 const db = require('./config/connection');
-// const routes = require('./routes');
+const routes = require('./routes');
 const resolvers = require('./schemas/resolvers');
 const typeDefs = require('./schemas/typeDefs');
 const { authMiddleware } = require('./utils/auth');
@@ -37,18 +37,18 @@ const startApolloServer = async (typeDefs, resolvers) => {
     app.listen(PORT, () => {
       console.log(`API server running on port ${PORT}!`);
       console.log(`Use GraphQL at http://localhost:${PORT}${server.graphqlPath}`);
-    })
-  })
+    });
+  });
   };
 
   // Call the async function to start the server
   startApolloServer(typeDefs, resolvers);
 
-// app.use(routes);
+app.use(routes);
 
-db.once('open', () => {
-  app.listen(PORT, () => 
-  console.log(`🌍 Now listening on localhost:${PORT}`),
-  console.log(`🌍 graphql at ${PORT}${server.graphqlPath}`)
-);
-});
+// db.once('open', () => {
+//   app.listen(PORT, () => 
+//   console.log(`🌍 Now listening on localhost:${PORT}`),
+//   console.log(`🌍 graphql at ${PORT}${server.graphqlPath}`)
+// );
+// });

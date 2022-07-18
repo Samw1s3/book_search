@@ -1,63 +1,66 @@
 const { User } = require('../models');
+const { signToken } = require('../utils/auth');
 
-function checkUserStatus(context){
-    const user= context.user
-    if(!user){
-        throw new Errpr('You are not logged in.')
-    } 
-    return user;
+function checkLogin(context){
+  const user = context.user;
+  if (!user) {
+    throw new Error('You are not logged in.');
+  }
+  return user;
 }
+
 
 const resolvers = {
   Query: {
-    me: async (parents, args, context) => {
-      return checkUserStatus(context);
-    },
+    me: async (parent, args, context) => checkLogin(context),
   },
   Mutation: {
-    login: async(parent, {email, password}, context) => {
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      throw new Error("Can't find this user");
-    }
+    async login(parent, {email, password}, context){
+      const user = await User.findOne({ email: email });
+      if (!user) {
+        throw new Error("Can't find this user" );
+      }
 
-    const correctPw = await user.isCorrectPassword(password);
+      const correctPw = await user.isCorrectPassword(password);
 
-    if (!correctPw) {
-        throw new Error("Password Wrong");
-    }
-    const token = signToken(user);
-    return { token, user };
+      if (!correctPw) {
+        throw new Error('Wrong password');
+      }
+      const token = signToken(user);
+
+      return { token, user };
     },
-    
-    saveBook: async (parent, {authors, description, title, bookId, image, link},context) => {
-        const user= context.user
-        if(!user){
-            throw new Errpr('You are not logged in.')
-        } console.log(user);
-        try {
-          const updatedUser = await User.findOneAndUpdate(
-            { _id: user._id },
-            { $addToSet: { savedBooks: {authors, description, title, bookId, image, link}} },
-            { new: true, runValidators: true }
-          );
-          return res.json(updatedUser);
-        } catch (err) {
-          console.log(err);
-          return res.status(400).json(err);
-        }
+
+    async saveBook(parent, {authors, description, title, bookId, image, link}, context){
+      const user = checkLogin(context);
+
+
+      try {
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: user._id },
+          { $addToSet: { savedBooks: { authors, description, title, bookId, image, link } } },
+          { new: true, runValidators: true }
+        );
+        return updatedUser;
+      } catch (err) {
+        console.log(err);
+        throw err;
+      }
     },
-    removeBook: async (parent, { bookId }, context) => {
-        if (context.user) {
-            const updatedUser = await User.findOneAndUpdate(
-                { _id: context.user._id },
-                { $pull: { savedBooks: { bookId:bookId } } },
-                { new: true }
-              );
-              return updatedUser;
-        }
-        throw new Error("You must be logged in");
+    async removeBook(parent, {bookId} , context){
+      const user = checkLogin(context);
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: user._id },
+        { $pull: { savedBooks: { bookId: bookId } } },
+        { new: true }
+      );
+      if (!updatedUser) {
+        throw new Error( "Couldn't find user with this id!" );
+      }
+      return updatedUser;
     },
+
+
     addUser: async (parent, args, context) => {
       const user = await User.create(args);
 
@@ -65,7 +68,8 @@ const resolvers = {
         throw new Error('Something is wrong!');
       }
       const token = signToken(user);
-      res.json({ token, user});
+      return { token, user };
+
     },
   },
 };
