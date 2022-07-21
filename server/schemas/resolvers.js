@@ -12,7 +12,11 @@ function checkLogin(context){
 
 const resolvers = {
   Query: {
-    me: async (parent, args, context) => checkLogin(context),
+    me: async (parent, args, context) => {
+      checkLogin(context);
+      const userData = await User.findOne( { _id: context.user._id }).select('-__v -password');
+      return userData;
+    },
   },
   Mutation: {
     async login(parent, {email, password}, context){
@@ -31,14 +35,14 @@ const resolvers = {
       return { token, user };
     },
 
-    async saveBook(parent, {authors, description, title, bookId, image, link}, context){
+    async saveBook(parent, {input}, context){
       const user = checkLogin(context);
 
 
       try {
         const updatedUser = await User.findOneAndUpdate(
           { _id: user._id },
-          { $addToSet: { savedBooks: { authors, description, title, bookId, image, link } } },
+          { $addToSet: { savedBooks: input } },
           { new: true, runValidators: true }
         );
         return updatedUser;

@@ -8,22 +8,16 @@ import Auth from '../utils/auth';
 import { removeBookId } from '../utils/localStorage';
 
 const SavedBooks = () => {
-  const [userData, setUserData] = useState({});
+  // const [userData, setUserData] = useState({});
 
-  const { data } = useQuery(GET_ME,
-    {
-      onCompleted: () => {
-        setUserData(data.me)
-      }
-    });
+  const { loading, data } = useQuery(GET_ME);
 
   // use this to determine if `useEffect()` hook needs to run again
-  const userDataLength = Object.keys(userData).length;
-
-
   const [removeBook, { error }] = useMutation(REMOVE_BOOK);
 
-  const handleremoveBook = async (bookId) => {
+  const userData = data?.me || {};
+
+  const handleRemoveBook = async (bookId) => {
     const token = Auth.loggedIn() ? Auth.getToken() : null;
 
     if (!token) {
@@ -31,15 +25,14 @@ const SavedBooks = () => {
     }
 
     try {
-      const updatedData = await removeBook({
-        variables: { bookId: bookId },
+      const { data } = await removeBook({
+        variables: { bookId },
       });
 
       if (error) {
         throw new Error('something went wrong!');
       }
 
-      setUserData(updatedData.data.removeBook);
       removeBookId(bookId);
     } catch (err) {
       console.error(err);
@@ -53,7 +46,7 @@ const SavedBooks = () => {
     );
   }
   // if data isn't here yet, say so
-  if (!userDataLength) {
+  if (loading) {
     return <h2>LOADING...AWAIT DATA</h2>;
   }
 
@@ -66,12 +59,12 @@ const SavedBooks = () => {
       </Jumbotron>
       <Container>
         <h2>
-          {userData.savedBooks.length
+          {userData.savedBooks?.length
             ? `Viewing ${userData.savedBooks.length} saved ${userData.savedBooks.length === 1 ? 'book' : 'books'}:`
             : 'You have no saved books!'}
         </h2>
         <CardColumns>
-          {userData.savedBooks.map((book) => {
+          {userData.savedBooks?.map((book) => {
             return (
               <Card key={book.bookId} border='dark'>
                 {book.image ? <Card.Img src={book.image} alt={`The cover for ${book.title}`} variant='top' /> : null}
@@ -79,7 +72,7 @@ const SavedBooks = () => {
                   <Card.Title>{book.title}</Card.Title>
                   <p className='small'>Authors: {book.authors}</p>
                   <Card.Text>{book.description}</Card.Text>
-                  <Button className='btn-block btn-danger' onClick={() => handleremoveBook(book.bookId)}>
+                  <Button className='btn-block btn-danger' onClick={() => handleRemoveBook(book.bookId)}>
                     Delete this Book!
                   </Button>
                 </Card.Body>
